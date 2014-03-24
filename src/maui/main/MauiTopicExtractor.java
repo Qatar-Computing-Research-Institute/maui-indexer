@@ -85,6 +85,9 @@ import maui.vocab.Vocabulary;
  * -n <br>
  * Specifies number of phrases to be output (default: 5).<p>
  *
+ * -c "score from 0 to 1 (float)"<br>
+ * Specifies the minimum score threshold that phrases should accomplish to appear in the output (default: 0).<p>
+ *
  * -t "name of class implementing stemmer"<br>
  * Sets stemmer to use (default: SremovalStemmer). <p>
  *
@@ -174,8 +177,10 @@ public class MauiTopicExtractor implements OptionHandler {
 	
 	/** Build global dictionaries from the test set. */
 	boolean buildGlobalDictionary = false;
-	
-	
+
+	/** minimum score that phrases should accomplish to appear in the output */
+	private double minScore = 0.0;
+		
 	public boolean getDebug() {
 		return debugMode;
 	}
@@ -206,7 +211,10 @@ public class MauiTopicExtractor implements OptionHandler {
      * Specifies wikipedia data.<p>
 	 *
 	 * -n<br>
-	 * Specifies number of phrases to be output (default: 5).<p>
+	 * Specifies maximum number of phrases to be output (default: 10).<p>
+	 *
+	 * -c "score from 0 to 1 (float)"<br>
+	 * Specifies the minimum score threshold that phrases should accomplish to appear in the output (default: 0).<p>
 	 *
 	 * -d<br>
 	 * Turns debugging mode on.<p>
@@ -299,7 +307,14 @@ public class MauiTopicExtractor implements OptionHandler {
 		this.buildGlobalDictionary = Utils.getFlag('b', options);
 		this.printGraph = Utils.getFlag('p', options);
 		this.additionalInfo = Utils.getFlag('a', options);
+		
+		String minScore = Utils.getOption('c', options);
+		if (minScore.length() > 0) {
+			this.minScore = Double.parseDouble(minScore);
+		} 		
+
 		Utils.checkForRemainingOptions(options);
+
 	}
 	
 	/**
@@ -326,6 +341,8 @@ public class MauiTopicExtractor implements OptionHandler {
 		options[current++] = "" + (this.documentLanguage);
 		options[current++] = "-n"; 
 		options[current++] = "" + (this.topicsPerDocument);
+		options[current++] = "-c"; 
+		options[current++] = "" + (this.minScore);
 		options[current++] = "-t"; 
 		options[current++] = "" + (stemmer.getClass().getName());		
 		options[current++] = "-s"; 
@@ -384,8 +401,11 @@ public class MauiTopicExtractor implements OptionHandler {
 				"\tSpecifies document language (en (default), es, de, fr).",
 				"i", 1, "-i <document language>"));
 		newVector.addElement(new Option(
-				"\tSpecifies number of phrases to be output (default: 5).",
+				"\tSpecifies number of phrases to be output (default: 10).",
 				"n", 1, "-n"));
+		newVector.addElement(new Option(
+				"\tSpecifies the minimum score threshold that phrases should accomplish to appear in the output (default: 0).",
+				"c", 1, "-c"));
 		newVector.addElement(new Option(
 				"\tSet the stemmer to use (default: SremovalStemmer).",
 				"t", 1, "-t <name of stemmer class>"));
@@ -559,8 +579,10 @@ public class MauiTopicExtractor implements OptionHandler {
 			while ((inst = mauiFilter.output()) != null) {
 				
 				int index = (int)inst.value(mauiFilter.getRankIndex()) - 1;
-			
-				if (index < topicsPerDocument) {
+
+				double score = inst.value(mauiFilter.getProbabilityIndex());
+
+				if (index < topicsPerDocument && score >= this.minScore) {
 					topRankedInstances[index] = inst;
 				}
 			}
@@ -648,15 +670,16 @@ public class MauiTopicExtractor implements OptionHandler {
 				computeGraph(topics, root, graphFile);
 			}
 			if (numExtracted > 0) {
-				if (debugMode) {
-					System.err.println("-- " + numCorrect + " correct");
-				}
-				double totalCorrect = mauiFilter.getTotalCorrect();
-				correctStatistics.addElement(new Double(numCorrect));
-				precisionStatistics.addElement(new Double(numCorrect/numExtracted));
-				recallStatistics.addElement(new Double(numCorrect/totalCorrect));
-				
+				precisionStatistics.addElement(new Double(numCorrect/numExtracted));				
 			}
+			// correct/recall should be computed even if numExtracted==0, in such case would be 0
+			if (debugMode) {
+				System.err.println("-- " + numCorrect + " correct");
+			}
+			correctStatistics.addElement(new Double(numCorrect));
+			double totalCorrect = mauiFilter.getTotalCorrect();			
+			recallStatistics.addElement(new Double(numCorrect/totalCorrect));
+			
 			if (printer != null) {
 				printer.flush();
 				printer.close();
@@ -666,51 +689,52 @@ public class MauiTopicExtractor implements OptionHandler {
 		
 		if (correctStatistics.size() != 0) {
 			
-		double[] st = new double[correctStatistics.size()];
-		for (int i = 0; i < correctStatistics.size(); i++) {
-			st[i] = correctStatistics.elementAt(i).doubleValue();
-		}
-		double avg = Utils.mean(st);
-		double stdDev = Math.sqrt(Utils.variance(st));
-		
-		
-		if (correctStatistics.size() == 1) {
-			System.err.println("\n-- Evaluation results based on 1 document:");
-				
-		} else {
-			System.err.println("\n-- Evaluation results based on " + correctStatistics.size() + " documents:");
-		}
-		System.err.println("Avg. number of correct keyphrases per document: " +
-				Utils.doubleToString(avg, 2) + " +/- " + 
-				Utils.doubleToString(stdDev, 2));
-		
-		
-		st = new double[precisionStatistics.size()];
-		for (int i = 0; i < precisionStatistics.size(); i++) {
-			st[i] = precisionStatistics.elementAt(i).doubleValue();
-		}
-		double avgPrecision = Utils.mean(st);
-		double stdDevPrecision = Math.sqrt(Utils.variance(st));
-		
-		System.err.println("Precision: " +
-				Utils.doubleToString(avgPrecision*100, 2) + " +/- " + 
-				Utils.doubleToString(stdDevPrecision*100, 2));
-		
-		st = new double[recallStatistics.size()];
-		for (int i = 0; i < recallStatistics.size(); i++) {
-			st[i] = recallStatistics.elementAt(i).doubleValue();
-		}
-		double avgRecall = Utils.mean(st);
-		double stdDevRecall = Math.sqrt(Utils.variance(st));
-		
-		System.err.println("Recall: " +
-				Utils.doubleToString(avgRecall*100, 2) + " +/- " + 
-				Utils.doubleToString(stdDevRecall*100, 2));
-		
-		double fMeasure = 2*avgRecall*avgPrecision/(avgRecall + avgPrecision);
-		System.err.println("F-Measure: " + Utils.doubleToString(fMeasure*100, 2));
-		
-		System.err.println("");
+			double[] st = new double[correctStatistics.size()];
+			for (int i = 0; i < correctStatistics.size(); i++) {
+				st[i] = correctStatistics.elementAt(i).doubleValue();
+			}
+			double avg = Utils.mean(st);
+			double stdDev = Math.sqrt(Utils.variance(st));
+			
+			
+			if (correctStatistics.size() == 1) {
+				System.err.println("\n-- Evaluation results based on 1 document:");
+					
+			} else {
+				System.err.println("\n-- Evaluation results based on " + correctStatistics.size() + " documents:");
+			}
+			System.err.println("Avg. number of correct keyphrases per document: " +
+					Utils.doubleToString(avg, 2) + " +/- " + 
+					Utils.doubleToString(stdDev, 2));
+			
+			
+			st = new double[precisionStatistics.size()];
+			for (int i = 0; i < precisionStatistics.size(); i++) {
+				st[i] = precisionStatistics.elementAt(i).doubleValue();
+			}
+			double avgPrecision = Utils.mean(st);
+			double stdDevPrecision = Math.sqrt(Utils.variance(st));
+			
+			System.err.println("Precision: " +
+					Utils.doubleToString(avgPrecision*100, 2) + " +/- " + 
+					Utils.doubleToString(stdDevPrecision*100, 2) +
+					" (skipped " + (correctStatistics.size() - precisionStatistics.size()) + " document(s))");
+			
+			st = new double[recallStatistics.size()];
+			for (int i = 0; i < recallStatistics.size(); i++) {
+				st[i] = recallStatistics.elementAt(i).doubleValue();
+			}
+			double avgRecall = Utils.mean(st);
+			double stdDevRecall = Math.sqrt(Utils.variance(st));
+			
+			System.err.println("Recall: " +
+					Utils.doubleToString(avgRecall*100, 2) + " +/- " + 
+					Utils.doubleToString(stdDevRecall*100, 2));
+			
+			double fMeasure = 2*avgRecall*avgPrecision/(avgRecall + avgPrecision);
+			System.err.println("F-Measure: " + Utils.doubleToString(fMeasure*100, 2));
+			
+			System.err.println("");
 		}
 		mauiFilter.batchFinished();
 	}
