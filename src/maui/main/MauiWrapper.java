@@ -109,7 +109,10 @@ public class MauiWrapper {
 	 * @return
 	 * @throws Exception
 	 */
-	public ArrayList<String> extractTopicsFromText(String text, int topicsPerDocument) throws Exception {
+	public ArrayList<String> extractTopicsFromText(
+			String text, int topicsPerDocument, double minScore)
+					throws Exception
+	{
 
 		if (text.length() < 5) {
 			throw new Exception("Text is too short!");
@@ -141,7 +144,9 @@ public class MauiWrapper {
 
 			int index = (int) inst.value(extractionModel.getRankIndex()) - 1;
 
-			if (index < topicsPerDocument) {
+			double score = inst.value(extractionModel.getProbabilityIndex());
+
+			if (index < topicsPerDocument && score >= minScore) {
 				topRankedInstances[index] = inst;
 			}
 		}
@@ -160,6 +165,13 @@ public class MauiWrapper {
 		return topics;
 	}
 
+	public ArrayList<String> extractTopicsFromText(
+			String text, int topicsPerDocument)
+					throws Exception
+	{
+		return extractTopicsFromText(text, topicsPerDocument, 0);
+	}
+
 	/**
 	 * Triggers topic extraction from a text file
 	 * @param filePath
@@ -167,12 +179,21 @@ public class MauiWrapper {
 	 * @return
 	 * @throws Exception
 	 */
-	public ArrayList<String> extractTopicsFromFile(String filePath, int numberOfTopics) throws Exception {
+	public ArrayList<String> extractTopicsFromFile(
+			String filePath, int numberOfTopics, double minScore)
+					throws Exception {
 		File documentTextFile = new File(filePath);
 		String documentText = FileUtils.readFileToString(documentTextFile);
-		return extractTopicsFromText(documentText, numberOfTopics);
+		return extractTopicsFromText(documentText, numberOfTopics, minScore);
+	}
+
+	public ArrayList<String> extractTopicsFromFile(
+			String filePath, int numberOfTopics)
+					throws Exception {
+		return extractTopicsFromFile(filePath, numberOfTopics, 0);
 	}
 	
+
 	/**
 	 * Main method for testing MauiWrapper
 	 * Add the path to a text file as command line argument
