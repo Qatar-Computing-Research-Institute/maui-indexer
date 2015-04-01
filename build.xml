@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="create_run_jar" name="Create Runnable Jar for Project Maui1.2 with Jar-in-Jar Loader">
+    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
+    <!--ANT 1.7 is required                                        -->
+    <target name="create_run_jar">
+        <jar destfile="/Users/hammady/Workspace/Maui1.2/bin/Maui1.2.1.jar">
+            <manifest>
+                <attribute name="Main-Class" value="org.eclipse.jdt.internal.jarinjarloader.JarRsrcLoader"/>
+                <attribute name="Rsrc-Main-Class" value="maui.main.MauiWrapper"/>
+                <attribute name="Class-Path" value="."/>
+                <attribute name="Rsrc-Class-Path" value="./ commons-io-1.4.jar commons-logging.jar icu4j_3_4.jar iri.jar jena.jar maxent-2.4.0.jar mysql-connector-java-3.1.13-bin.jar opennlp-tools-1.3.0.jar snowball.jar trove.jar weka.jar wikipediaminer1.1.jar xercesImpl.jar"/>
+            </manifest>
+            <zipfileset src="jar-in-jar-loader.zip"/>
+            <fileset dir="/Users/hammady/Workspace/Maui1.2/bin"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="commons-io-1.4.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="commons-logging.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="icu4j_3_4.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="iri.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="jena.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="maxent-2.4.0.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="mysql-connector-java-3.1.13-bin.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="opennlp-tools-1.3.0.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="snowball.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="trove.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="weka.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="wikipediaminer1.1.jar"/>
+            <zipfileset dir="/Users/hammady/Workspace/Maui1.2/lib" includes="xercesImpl.jar"/>
+        </jar>
+    </target>
+</project>
